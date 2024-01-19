@@ -1,47 +1,57 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.util.Scanner;
+import java.net.SocketException;
 
-public class Messenger implements Runnable {
+public class Messenger {
 
-    private final Socket user;
+    private static final String SERVER_ADDRESS = "localhost";
+    private static final int SERVER_PORT = 8080;
 
-    public Messenger(Socket user) {
-        this.user = user;
-    }
+    public static void main(String[] args) {
+        try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+             BufferedReader serverIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             BufferedWriter clientOut = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+             BufferedReader digited = new BufferedReader(new InputStreamReader(System.in))) {
 
-    @Override
-    public void run() {
-        try (Scanner teclado = new Scanner(System.in);
-                PrintStream saida = new PrintStream(user.getOutputStream())) {
-
-            while (teclado.hasNextLine()) {
-                saida.println(teclado.nextLine());
-            }
+            startMessageReceiverThread(serverIn);
+            handleUserInput(clientOut, digited);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void main(String[] args) {
-        try {
-            Socket user = new Socket("127.0.0.1", 8080);
-            Messenger messenger = new Messenger(user);
+    private static void startMessageReceiverThread(BufferedReader serverIn) {
+        Thread messageReceiver = new Thread(() -> {
+            try {
+                String serverMessage;
+                while ((serverMessage = serverIn.readLine()) != null) {
+                    System.out.println(serverMessage);
+                }
+            } catch (SocketException e) {
+                System.out.println("Conexão encerrada pelo servidor.");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        messageReceiver.start();
+    }
 
-            // Inicie a thread para lidar com a entrada do teclado
-            Thread thread = new Thread(messenger);
-            thread.start();
+    private static void handleUserInput(BufferedWriter clientOut, BufferedReader digited) throws IOException {
+        String userInput;
+        while (true) {
+            userInput = digited.readLine();
+            clientOut.write(userInput);
+            clientOut.newLine();
+            clientOut.flush();
 
-            // Aguarde até que a thread seja concluída (por exemplo, usuário pressiona
-            // Ctrl+C)
-            thread.join();
-
-            user.close();
-
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            if (userInput.equalsIgnoreCase("exit")) {
+                break;
+            }
         }
     }
 }

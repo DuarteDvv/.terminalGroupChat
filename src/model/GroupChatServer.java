@@ -1,30 +1,36 @@
-
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import util.ClientHandler;
+
 public class GroupChatServer {
 
     private static final int PORT = 8080;
-    private static final List<PrintWriter> clients = new ArrayList<>();
+    private static final List<BufferedWriter> clientsOutputs = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+
+        try (ServerSocket chatServer = new ServerSocket(PORT)) {
             System.out.println("Chat Group is waiting for connections on port " + PORT);
 
             while (true) {
-                Socket conection = serverSocket.accept();
-                PrintWriter out = new PrintWriter(conection.getOutputStream(), true);
-                clients.add(out);
+                Socket clientConnection = chatServer.accept();
+                System.out.println("New connection with IP: " + clientConnection.getInetAddress().getHostAddress());
 
-                // Cria uma thread para lidar com a conexão
-                Thread newThread = new Thread(new Messenger(conection));
-                newThread.start();
+                BufferedWriter clientOut = new BufferedWriter(new OutputStreamWriter(clientConnection.getOutputStream()));
+                clientsOutputs.add(clientOut);
+
+                Thread paralelManip = new Thread(new ClientHandler(clientConnection));
+                paralelManip.start();
+                    
             }
         }
     }
 
+    
 }
