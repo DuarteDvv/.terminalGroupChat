@@ -26,6 +26,12 @@ public class ClientHandler implements Runnable{
             servidorParaCliente.write("Welcome " + username + "\nWe gonna put you on the chat");
             servidorParaCliente.flush();
 
+            String clienteMessage;
+            while(clienteParaServidor.readLine() != null){
+                clienteMessage = clienteParaServidor.readLine();
+                System.out.println(username + "\n" + clienteMessage);
+            }
+
         }
         catch (IOException e) {
             e.printStackTrace();
